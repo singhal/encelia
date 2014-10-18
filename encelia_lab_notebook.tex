@@ -149,6 +149,34 @@ But, it weirded me out that there is such seeming inconsistency across the align
 \item getting rid of SNPS that are MQ $<=$ 20 will lose very few real SNPs likely, so the only filter worth considering
 \end{itemize}
 \end{itemize}
-These analyses are all on my desktop, under \verb+/Users/singhal/encelia/analyses/coverage_snp/+ and \verb+/Useres/singhal/encelia/analyses/snp_analysis/+.
+These analyses are all on my desktop, under \verb+/Users/singhal/encelia/analyses/coverage_snp/+ and \verb+/Users/singhal/encelia/analyses/snp_analysis/+.
 
+\labday{Monday, 13 October 2014 - Friday, 17 October 2014}
+\begin{enumerate}
+\item Read Backed Phasing: read backed phasing didn't really appear to work; maybe because didn't build on haplotypecaller? don't want to use haplotypecaller because that's not trustworthy, so no phasing, I guess.
+\item Sequence Divergence: estimated $D_xy$ and $D_a$ for Encelia palmeri and ventorum. Results are plotted locally under analysis. 0.76\%: average Da, 0.97\%: average Dxy
+\item Ancestral allele: made massive mpileup file that I will parse later to create the ancestral sequence for use in ANGSD. Run via: \verb+samtools mpileup -f ~/encelia/annotation/palmeri.annotated.fasta CD101.bwa_sameref.bam CD102.bwa_sameref.bam CD103.bwa_sameref.bam CD104.bwa_sameref.bam > ancestral_allele.mpileup.out+
+\item SNP calls: redid them, because it became clear that the mapping filter was too stringtent. So, I redid them with no BAQ and no adjustments for mapping quality. I am still concerned about these results, because definitely gets some SNPs that aren't legit, which can be easily seen as the sites that are uniformly heterozygous. Need to revisit this, though I did end up using these results for the pop genomic stuff. I think these SNP calls are okay depending on what I am trying to do.
+\item SNP Filtering 1: Looked at the filter values for SNPs in the winning approach (bwa / samtools) and compared values across SNPs that were good (i.e., found in another variant call for the same raw data) or bad (i.e., unique to the given set).
+\begin{itemize}
+\item looks like the only filter worth considering is MQ, or mapping quality
+\item note that 57458 are bad
+\item note that 48829 are good
+\item getting rid of SNPS
+\begin{enumerate} 
+\item MQSB - filter less than 0.2 
+\item SGB - filter less than -500 
+\item MQ0F - filter greater than 0.2 
+\item MQ - filter less than 40 
+\end{enumerate}
+\item using these filters, will lose very few real SNPs likely
+\item gives: 121399: fixed SNPs, 78691: shared SNPs, 111270: polymorphic SNPs in palmeri, 63069: polymorphic SNPS in ventorum
+\end{itemize}
+\item Admixture: best result was 2 populations, no evidence for admixture
+\item SNP Filtering 2: To filter for coverage, did the following:
+\begin{verbatim}
+~/bin/bedtools2/bin/bedtools intersect -a ../variants/Encelia_palmeri.bwa_sameref.samtools.annotated.filteredSNPs.vcf -b popgenomics.bed -sorted > Encelia_palmeri.bwa_sameref.samtools.annotated.filteredSNPs.highCoverage.vcf
+~/bin/bedtools2/bin/bedtools intersect -a ../variants/Encelia_ventorum.bwa_sameref.samtools.annotated.filteredSNPs.vcf -b popgenomics.bed -sorted > Encelia_ventorum.bwa_sameref.samtools.annotated.filteredSNPs.highCoverage.vcf
+\end{verbatim}
+\end{enumerate}
 \end{document}
