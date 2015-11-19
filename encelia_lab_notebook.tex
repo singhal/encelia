@@ -179,4 +179,78 @@ These analyses are all on my desktop, under \verb+/Users/singhal/encelia/analyse
 ~/bin/bedtools2/bin/bedtools intersect -a ../variants/Encelia_ventorum.bwa_sameref.samtools.annotated.filteredSNPs.vcf -b popgenomics.bed -sorted > Encelia_ventorum.bwa_sameref.samtools.annotated.filteredSNPs.highCoverage.vcf
 \end{verbatim}
 \end{enumerate}
+
+\labday{Week of 20 October - 24 October 2014}
+\begin{enumerate}
+\item ancestral allele sequence identification: I had aligned the four outgroups to E. palmeri, and then defined the ancestral sequence using an in house script. It definitely seems like the polarization isn't quite to be trusted, ad it tended to call the palmeri allele ancestral over the ventorum. (Of course, this could be possible given E. ventorum's \"hyper-derived\" status.)
+\item ANGSD: started running it. My first runs were super weird, which could be for a two main reasons: (1) the \verb+only_proper_pairs+ flag or (2) I restricted calling to only high coverage areas, rather than using the UTR regions. The code I ran was the following:
+\begin{verbatim}
+# identify the sites that are variable in either lineage
+# -P is the number of threads
+/home/ssinghal/bin/angsd0.612/angsd -GL 1 -b /home/ssinghal/encelia/analysis/angsd/ventorum.bamlist.txt -anc /home/ssinghal/encelia/variants/ancestral_allele/ancestral_allele.fa -rf /home/ssinghal/encelia/analysis/angsd/coverage.angsd_regions.txt -P 12 -out /home/ssinghal/encelia/analysis/angsd/ventorum -doSaf 1 -only_proper_pairs 0
+/home/ssinghal/bin/angsd0.612/angsd -GL 1 -b /home/ssinghal/encelia/analysis/angsd/palmeri.bamlist.txt -anc /home/ssinghal/encelia/variants/ancestral_allele/ancestral_allele.fa -rf /home/ssinghal/encelia/analysis/angsd/coverage.angsd_regions.txt -P 12 -out /home/ssinghal/encelia/analysis/angsd/palmeri -doSaf 1 -only_proper_pairs 0
+# get the SFS for each pop
+# first argument is saf file, second argument is the number of chromosomes, -P 24 is the number of cores we want to use
+/home/ssinghal/bin/angsd0.612/realSFS /home/ssinghal/encelia/analysis/angsd/ventorum.saf 10 -P 12 > /home/ssinghal/encelia/analysis/angsd/ventorum.saf.sfs
+/home/ssinghal/bin/angsd0.612/realSFS /home/ssinghal/encelia/analysis/angsd/palmeri.saf 10 -P 12 > /home/ssinghal/encelia/analysis/angsd/palmeri.saf.sfs
+# want to identify sites that are variable in either of the populations
+gunzip -c /home/ssinghal/encelia/analysis/angsd/ventorum.saf.pos.gz /home/ssinghal/encelia/analysis/angsd/palmeri.saf.pos.gz |sort  -S 50\%|uniq -d|sort -k1,1  -S 50\% > /home/ssinghal/encelia/analysis/angsd/palmeri_ventorum.intersect_sites.txt
+# want to estimate genotypes at variable sites for both chromosomes
+/home/ssinghal/bin/angsd0.612/angsd -GL 1 -b /home/ssinghal/encelia/analysis/angsd/ventorum.bamlist.txt -anc /home/ssinghal/encelia/variants/ancestral_allele/ancestral_allele.fa -rf /home/ssinghal/encelia/analysis/angsd/coverage.angsd_regions.txt -P 12 -out /home/ssinghal/encelia/analysis/angsd/ventorum2 -sites /home/ssinghal/encelia/analysis/angsd/palmeri_ventorum.intersect_sites.txt -doSaf 1 -only_proper_pairs 0
+/home/ssinghal/bin/angsd0.612/angsd -GL 1 -b /home/ssinghal/encelia/analysis/angsd/palmeri.bamlist.txt -anc /home/ssinghal/encelia/variants/ancestral_allele/ancestral_allele.fa -rf /home/ssinghal/encelia/analysis/angsd/coverage.angsd_regions.txt -P 12 -out /home/ssinghal/encelia/analysis/angsd/palmeri2 -sites /home/ssinghal/encelia/analysis/angsd/palmeri_ventorum.intersect_sites.txt -doSaf 1 -only_proper_pairs 0
+# estimate joint frequency
+/home/ssinghal/bin/angsd0.612/realSFS 2dsfs /home/ssinghal/encelia/analysis/angsd/ventorum2.saf /home/ssinghal/encelia/analysis/angsd/palmeri2.saf 10 10 -P 12 > /home/ssinghal/encelia/analysis/ventorum_palmeri.2D.sfs
+\end{verbatim}
+\item to run unfolded ANGSD
+\begin{verbatim}
+# can also run with -fold 1 to get folded spectrum (add this to all angsd commands)
+# if running with -fold 1, then the number supplied to realSFS becomes the number of indiv, not the number of chromosomes
+/home/ssinghal/bin/angsd0.612/angsd -GL 1 -b /home/ssinghal/encelia/analysis/angsd/ventorum.bamlist.txt -anc /home/ssinghal/encelia/variants/ancestral_allele/ancestral_allele.fa -rf /home/ssinghal/encelia/analysis/angsd/coverage.angsd_regions.txt -P 12 -out /home/ssinghal/encelia/analysis/angsd/ventorum_folded -doSaf 1 -only_proper_pairs 0 -fold 1
+/home/ssinghal/bin/angsd0.612/angsd -GL 1 -b /home/ssinghal/encelia/analysis/angsd/palmeri.bamlist.txt -anc /home/ssinghal/encelia/variants/ancestral_allele/ancestral_allele.fa -rf /home/ssinghal/encelia/analysis/angsd/coverage.angsd_regions.txt -P 12 -out /home/ssinghal/encelia/analysis/angsd/palmeri_folded -doSaf 1 -only_proper_pairs 0 -fold 1
+/home/ssinghal/bin/angsd0.612/realSFS /home/ssinghal/encelia/analysis/angsd/ventorum_folded.saf 5 -P 12 > /home/ssinghal/encelia/analysis/angsd/ventorum_folded.saf.sfs
+/home/ssinghal/bin/angsd0.612/realSFS /home/ssinghal/encelia/analysis/angsd/palmeri_folded.saf 5 -P 12 > /home/ssinghal/encelia/analysis/angsd/palmeri_folded.saf.sfs
+gunzip -c /home/ssinghal/encelia/analysis/angsd/ventorum_folded.saf.pos.gz /home/ssinghal/encelia/analysis/angsd/palmeri_folded.saf.pos.gz |sort  -S 50\%|uniq -d|sort -k1,1  -S 50\% > /home/ssinghal/encelia/analysis/angsd/palmeri_ventorum.intersect_sites_folded.txt
+/home/ssinghal/bin/angsd0.612/angsd -GL 1 -b /home/ssinghal/encelia/analysis/angsd/ventorum.bamlist.txt -anc /home/ssinghal/encelia/variants/ancestral_allele/ancestral_allele.fa -rf /home/ssinghal/encelia/analysis/angsd/coverage.angsd_regions.txt -P 12 -out /home/ssinghal/encelia/analysis/angsd/ventorum_folded2 -sites /home/ssinghal/encelia/analysis/angsd/palmeri_ventorum.intersect_sites_folded.txt -doSaf 1 -only_proper_pairs 0 -fold 1
+/home/ssinghal/bin/angsd0.612/angsd -GL 1 -b /home/ssinghal/encelia/analysis/angsd/palmeri.bamlist.txt -anc /home/ssinghal/encelia/variants/ancestral_allele/ancestral_allele.fa -rf /home/ssinghal/encelia/analysis/angsd/coverage.angsd_regions.txt -P 12 -out /home/ssinghal/encelia/analysis/angsd/palmeri_folded2 -sites /home/ssinghal/encelia/analysis/angsd/palmeri_ventorum.intersect_sites_folded.txt -doSaf 1 -only_proper_pairs 0 -fold 1
+/home/ssinghal/bin/angsd0.612/realSFS 2dsfs /home/ssinghal/encelia/analysis/angsd/ventorum_folded2.saf /home/ssinghal/encelia/analysis/angsd/palmeri_folded2.saf 5 5 -P 12 > /home/ssinghal/encelia/analysis/ventorum_palmeri.folded2D.sfs
+\end{verbatim}
+\item so, rerunning ANGSD with these new parameters, and will see if the SFS makes more sense. If not, maybe worth pursuing just defining it myself using the SAMTOOLS calls.
+\end{enumerate}
+
+\labday{Week of 26 January}
+screen mpiexec -np 1 -machinefile ~/node01 tblastx -query /home/ssinghal/encelia/annotation/palmeri.annotated.fasta -db /home/ssinghal/encelia/annotation/ventorum.annotated.fasta -out /home/ssinghal/encelia/annotation/palmeri_ventorum.blast.out -evalue 10 -outfmt 6 -max_target_seqs 10 -num_threads 12 -max_hsps 1
+
+screen mpiexec -np 1 -machinefile ~/node02 tblastx -query /home/ssinghal/encelia/annotation/ventorum.annotated.fasta -db /home/ssinghal/encelia/annotation/palmeri.annotated.fasta -out /home/ssinghal/encelia/annotation/ventorum_palmeri.blast.out -evalue 10 -outfmt 6 -max_target_seqs 10 -num_threads 12 -max_hsps 1
+
+\labday{Week of 6 April}
+\begin{verbatim}
+screen mpiexec -np 1 -machinefile ~/node01 perl ~/encelia/scripts/pipeline/annotate_assemblies.pl -a /home/ssinghal/encelia/final_assemblies/asperifolia/ -b /home/ssinghal/encelia/genomes/Mguttatus_v2.0_256.fasta -e 8 -f /home/ssinghal/encelia/genomes/Mguttatus_v2.0_256_annotation_for_script.txt
+
+screen mpiexec -np 1 -machinefile ~/node02 perl ~/encelia/scripts/pipeline/annotate_assemblies.pl -a /home/ssinghal/encelia/final_assemblies/canescens/ -b /home/ssinghal/encelia/genomes/Mguttatus_v2.0_256.fasta -e 8 -f /home/ssinghal/encelia/genomes/Mguttatus_v2.0_256_annotation_for_script.txt
+
+screen mpiexec -np 1 -machinefile ~/node03 perl ~/encelia/scripts/pipeline/annotate_assemblies.pl -a /home/ssinghal/encelia/final_assemblies/frutescens/ -b /home/ssinghal/encelia/genomes/Mguttatus_v2.0_256.fasta -e 8 -f /home/ssinghal/encelia/genomes/Mguttatus_v2.0_256_annotation_for_script.txt
+
+screen mpiexec -np 1 -machinefile ~/node04 perl ~/encelia/scripts/pipeline/annotate_assemblies.pl -a /home/ssinghal/encelia/final_assemblies/farinosa/ -b /home/ssinghal/encelia/genomes/Mguttatus_v2.0_256.fasta -e 8 -f /home/ssinghal/encelia/genomes/Mguttatus_v2.0_256_annotation_for_script.txt
+\end{verbatim}
+- had to redo annotation because i must have run all the scripts in the same folder
+
+- annotating helianthus for use because i forgot an outgroup :(
+
+\labday{Week of 23 June}
+- tried new aligners: SMALT, NGM, bowtie2 -- SMALT & NGM generate far more SNPs than bowtie2. Using NGM because so fast.
+- regenerating the ancestral allele sequence using NGM aligned \& samtools called SNPs; changed the script so that regions with low coverage are lower-case not 'NN's
+- ~/bin/samtools/samtools mpileup -A -B -I -f /home/ssinghal/encelia/annotation/palmeri.annotated.fasta 
+
+~/bin/samtools/samtools mpileup -A -I -ugf /home/ssinghal/encelia/variants/ancestral_allele/ancestral_allele.fa -o OUTFILE <sample1.bam> <sample2.bam> <sample3.bam>
+~/bin/bcftools/bcftools call -vmO z -o <study.vcf.gz> INOUT
+
+The new calls are much more balanced between good calls and bad calls. In palmeri, ~6\% of the 300K SNPs were "bad", or uniquely found in just one call set. In ventorum, ~7\% of the 370K SNPs were "bad", or uniquely found in just one call set.  Based on this, I identified the following filters.
+
+FILTERS FOR PALMERI & VENTORUM
+MQB - drop if <= 0
+qual - drop if <= 10
+RPB - drop if <= 0
+
+These filters remove a significant portion of "bad" calls but a very small portion of good calls.
+
 \end{document}
