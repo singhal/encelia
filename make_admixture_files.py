@@ -1,13 +1,15 @@
 import re
+import gzip
+import random
 
-vcf1 = '/home/ssinghal/encelia/variants/vcfs/palmeri.ngm.annotated.filtered_qual.high_cov.filtered_fs.vcf'
-vcf2 = '/home/ssinghal/encelia/variants/vcfs/ventorum.ngm.annotated.filtered_qual.high_cov.filtered_fs.vcf'
+vcf1 = '/home/ssinghal/encelia/variants/vcfs/palmeri.ngm.annotated.filtered_qual.high_cov.filtered_fs.vcf.gz'
+vcf2 = '/home/ssinghal/encelia/variants/vcfs/ventorum.ngm.annotated.filtered_qual.high_cov.filtered_fs.vcf.gz'
 ind = {'palmeri': 5, 'ventorum': 5}
 
 snps = {}
 
 def get_vcf(vcf, snps, sp):
-	f = open(vcf, 'r')
+	f = gzip.open(vcf, 'r')
 	for l in f:
 		if not re.search('^#', l):
 			d = re.split('\t', l)
@@ -56,7 +58,7 @@ def get_blocks(values, dist):
                 elif v > ma:
                     ma = v
             else:
-                if len(temp) > 1:
+                if len(temp) > 0:
                     result.append(temp)
                 mi = ma = v
                 temp = [v]
@@ -65,9 +67,9 @@ def get_blocks(values, dist):
 
 out = open('/home/ssinghal/encelia/analysis/admixture/encelia.admixture.geno', 'w')
 for chr in snps:
-	positions = sorted(snps[chr].keys())
+	positions = sorted([int(x) for x in snps[chr].keys()])
 	positions = get_blocks(positions, 100)
-	positions = [x[0] for x in positions]	
+	positions = [str(random.choice(x)) for x in positions]	
 
         for pos in positions:
                 snps_str = ''
@@ -75,4 +77,6 @@ for chr in snps:
                         for bp in snps[chr][pos][species]:
                                 snps_str += str(bp)
                 out.write(snps_str + '\n')
+	if len(positions) > 0:
+		print chr
 out.close()
